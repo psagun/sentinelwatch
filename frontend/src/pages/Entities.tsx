@@ -222,14 +222,6 @@ export default function Entities() {
                       catch { return entity.metadata?.domains?.join(', ') || u || '—'; }
                     })()}
                   </span>
-                  {entity.finding_count > 0 && (
-                    <>
-                      <span className="text-text-muted/30">·</span>
-                      <span className="font-mono text-[11px] text-text-secondary">
-                        {entity.finding_count} finding{entity.finding_count !== 1 ? 's' : ''}
-                      </span>
-                    </>
-                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button
