@@ -257,7 +257,8 @@ export default function Reports() {
     try {
       const result = await generateEntityAiReport(entityName);
       if (result.status === 'success' && result.report) {
-        setEntityAiReports(prev => ({ ...prev, [entityName]: { report: result.report, loading: false } }));
+        const report: string = result.report;
+        setEntityAiReports(prev => ({ ...prev, [entityName]: { report, loading: false } }));
       } else {
         setEntityAiReports(prev => ({ ...prev, [entityName]: { report: '', loading: false, error: result.error || 'Failed' } }));
       }

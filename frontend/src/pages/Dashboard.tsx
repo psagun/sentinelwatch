@@ -190,7 +190,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           title={selectedEntities.length === 1 ? selectedEntities[0] : "Monitored Entities"}
-          value={selectedEntities.length > 0 ? selectedEntities.length : (metrics?.monitored_entities ?? 0)}
+          value={selectedEntities.length > 0 ? selectedEntities.length : (metrics?.total_entities ?? 0)}
           icon={<Globe size={18} />}
           color="#A78BFA"
           delay={0.15}

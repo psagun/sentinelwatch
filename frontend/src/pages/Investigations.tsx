@@ -171,7 +171,7 @@ export default function Investigations() {
                                  bg-surface-200 text-text-secondary border border-border"
                     >
                       <ExternalLink size={10} />
-                      {ev.source}: {ev.data_preview || ev.title || 'No data'}
+                      {ev.source}: {ev.data_preview || 'No data'}
                     </span>
                   ))}
                 </div>
