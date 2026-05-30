@@ -24,6 +24,39 @@ async def lifespan(app: FastAPI):
     """Application lifecycle management."""
     logger.info(f"Starting {settings.app_name} v{settings.version}")
     await init_db()
+
+    # Clean up old monitoring-infrastructure alerts and findings
+    from src import database as db
+    from src.api.routes import _findings_db, _alerts_db
+
+    INFRA_TITLES = {"website unreachable", "scraping browser could not render"}
+    cleaned_findings = 0
+    cleaned_alerts = 0
+
+    # Remove infrastructure findings
+    kept_findings = []
+    for f in _findings_db:
+        title = (f.get("title") or "").lower()
+        if any(kw in title for kw in INFRA_TITLES):
+            await db.delete_finding(f.get("id", ""))
+            cleaned_findings += 1
+        else:
+            kept_findings.append(f)
+    _findings_db[:] = kept_findings
+
+    # Remove alerts linked to infrastructure findings
+    infa_finding_ids = {f.get("id", "") for f in _findings_db}
+    kept_alerts = []
+    for a in _alerts_db:
+        if a.get("finding_id") in infa_finding_ids:
+            cleaned_alerts += 1
+        else:
+            kept_alerts.append(a)
+    _alerts_db[:] = kept_alerts
+
+    if cleaned_findings or cleaned_alerts:
+        logger.info(f"Cleaned {cleaned_findings} infra findings and {cleaned_alerts} orphaned alerts")
+
     yield
     await close_db()
     logger.info(f"Shutting down {settings.app_name}")

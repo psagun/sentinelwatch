@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Plus, Globe, Loader2, CheckCircle2, AlertTriangle, ExternalLink, RefreshCw, Shield, Search, Eye, Bug, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { monitorEntity, getEntity } from '../api/client';
 import type { Entity } from '../types';
 
@@ -48,6 +49,7 @@ const CHECK_OPTIONS = [
 ];
 
 export default function AddEntityModal({ open, onClose, onComplete }: AddEntityModalProps) {
+  const navigate = useNavigate();
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
   const [entityId, setEntityId] = useState<string | null>(null);
@@ -222,10 +224,24 @@ export default function AddEntityModal({ open, onClose, onComplete }: AddEntityM
               {/* Scan Configuration Toggle */}
               <button
                 onClick={() => setShowConfig(!showConfig)}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-surface-200/50 border border-border text-xs text-text-muted hover:text-text-primary transition-colors"
+                className={`w-full flex items-center justify-between p-3.5 rounded-lg border-2 text-sm font-semibold transition-all ${
+                  showConfig
+                    ? 'bg-green-500/10 border-green-500/40 text-green-400 hover:bg-green-500/15'
+                    : 'bg-green-500/15 border-green-500/50 text-green-400 hover:bg-green-500/25 hover:border-green-400 hover:shadow-lg hover:shadow-green-500/10'
+                }`}
               >
-                <span className="font-semibold uppercase tracking-wider">Scan Configuration</span>
-                <span className="text-[10px]">{showConfig ? 'Hide' : 'Show'} advanced settings</span>
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
+                  Scan Configuration
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-medium">
+                  {showConfig ? 'Hide' : 'Customize'}
+                  <svg className={`w-3.5 h-3.5 transition-transform ${showConfig ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </span>
               </button>
 
               {showConfig && (
@@ -388,8 +404,9 @@ export default function AddEntityModal({ open, onClose, onComplete }: AddEntityM
               </button>
               <button
                 onClick={() => {
+                  const entityName = scannedEntity?.name || displayName;
                   onClose();
-                  window.location.hash = '#/';
+                  navigate('/?entity=' + encodeURIComponent(entityName));
                 }}
                 className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg font-semibold text-sm
                            bg-accent-cyan text-surface hover:bg-accent-cyan/90 transition-colors"

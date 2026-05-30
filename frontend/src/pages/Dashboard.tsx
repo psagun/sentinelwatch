@@ -10,7 +10,7 @@ import RiskGauge from '../components/RiskGauge';
 import { getAlerts } from '../api/client';
 import type { Alert } from '../types';
 import { Shield, AlertTriangle, Globe, Activity, CheckCircle, Filter, Bug, ChevronDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PageMeta from '../components/PageMeta';
 
 export default function Dashboard() {
@@ -20,6 +20,15 @@ export default function Dashboard() {
   const [selectedEntities, setSelectedEntities] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Read ?entity= query param on mount to pre-filter
+  useEffect(() => {
+    const entityParam = searchParams.get('entity');
+    if (entityParam) {
+      setSelectedEntities([entityParam]);
+    }
+  }, [searchParams]);
 
   // Fetch data — re-fetches from backend when entity selection changes
   const fetchData = useCallback(async (entities: string[]) => {

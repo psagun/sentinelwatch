@@ -83,6 +83,10 @@ class BrightDataClient:
         Uses Bright Data Web Unlocker REST API directly (more reliable than
         CLI subprocess for server environments), with CLI as fallback.
 
+        For high-difficulty sites (e.g., nytimes.com), the Bright Data zone
+        must have Premium Domains enabled in the Control Panel. Set the
+        BRIGHTDATA_ZONE env var to the premium-enabled zone name.
+
         Args:
             url: Target URL to retrieve.
             country: 2-letter country code for geo-targeting (e.g., 'us', 'gb').
@@ -93,40 +97,57 @@ class BrightDataClient:
         """
         logger.info(f"Web Unlocker fetching: {url}")
 
-        # Try direct REST API first (more reliable from server processes)
+        # Try REST API (always US geo-targeting)
         try:
-            result = await self._web_unlocker_rest_api(url, country)
+            result = await self._web_unlocker_rest_api(url, country="us")
             if result:
                 return result
+            logger.warning(f"Web Unlocker returned empty for {url}")
         except Exception as e:
-            logger.debug(f"REST API method failed, trying CLI: {e}")
+            logger.warning(f"Web Unlocker REST API failed for {url}: {e}")
 
-        # Fallback to CLI subprocess
-        args = ["scrape", url]
-        if country:
-            args.extend(["--country", country])
+        # Debug: try with mobile UA
+        try:
+            result = await self._web_unlocker_rest_api(url, country="us", mobile=True)
+            if result:
+                logger.info(f"Web Unlocker succeeded with mobile UA for {url}")
+                return result
+        except Exception as e:
+            logger.debug(f"Web Unlocker mobile attempt failed: {e}")
+
+        # Fallback to CLI subprocess with debug timing
+        logger.info(f"Falling back to CLI for {url}")
+        args = ["scrape", url, "--country", "us", "--timing"]
         try:
             output = await self._run_cli(*args, timeout=90)
-            return output
+            if output:
+                return output
         except BrightDataClientError as e:
-            logger.warning(f"Web Unlocker failed for {url}: {e}")
-            return ""
+            logger.warning(f"CLI fallback failed for {url}: {e}")
+
+        return ""
 
     async def _web_unlocker_rest_api(
-        self, url: str, country: Optional[str] = None
+        self, url: str, country: Optional[str] = None, mobile: bool = False
     ) -> str:
         """Fetch URL via Bright Data Web Unlocker REST API directly.
 
         POST https://api.brightdata.com/request
         Returns the page body content (HTML).
+
+        For Premium Domains (high-difficulty sites like nytimes.com):
+        Create a zone with Premium Domains enabled in the Bright Data
+        Control Panel, then set BRIGHTDATA_ZONE to that zone name.
         """
+        zone = settings.brightdata_zone or "cli_unlocker"
         payload = {
-            "zone": settings.brightdata_zone or "cli_unlocker",
+            "zone": zone,
             "url": url,
             "format": "json",
+            "country": country or "us",
         }
-        if country:
-            payload["country"] = country
+        if mobile:
+            payload["mobile"] = True
 
         headers = {
             "Authorization": f"Bearer {settings.brightdata_api_key}",
