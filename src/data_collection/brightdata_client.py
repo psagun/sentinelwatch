@@ -80,12 +80,15 @@ class BrightDataClient:
     ) -> str:
         """Retrieve page content bypassing bot detection and geo-blocks.
 
-        Uses Bright Data Web Unlocker REST API directly (more reliable than
-        CLI subprocess for server environments), with CLI as fallback.
+        Uses Bright Data Web Unlocker REST API with multi-tier fallback:
+        1. Premium zone (if configured — for high-difficulty sites)
+        2. Standard zone
+        3. Mobile UA
+        4. Scraping Browser (if WebSocket configured — strongest anti-detection)
+        5. CLI subprocess
 
-        For high-difficulty sites (e.g., nytimes.com), the Bright Data zone
-        must have Premium Domains enabled in the Control Panel. Set the
-        BRIGHTDATA_ZONE env var to the premium-enabled zone name.
+        For premium scraping, set BRIGHTDATA_PREMIUM_ZONE and/or
+        BRIGHTDATA_BROWSER_WS env vars.
 
         Args:
             url: Target URL to retrieve.
@@ -93,42 +96,63 @@ class BrightDataClient:
             render: Whether to wait for JS rendering before returning.
 
         Returns:
-            Page content as markdown text.
+            Page content as string.
         """
         logger.info(f"Web Unlocker fetching: {url}")
 
-        # Try REST API (always US geo-targeting)
+        # Tier 1: Premium zone (if configured — handles high-difficulty sites)
+        premium_zone = settings.brightdata_premium_zone
+        if premium_zone:
+            try:
+                result = await self._web_unlocker_rest_api(url, country="us", zone=premium_zone)
+                if result:
+                    logger.info(f"Premium zone success for {url}")
+                    return result
+            except Exception as e:
+                logger.warning(f"Premium zone failed for {url}: {e}")
+
+        # Tier 2: Standard zone
         try:
             result = await self._web_unlocker_rest_api(url, country="us")
             if result:
                 return result
-            logger.warning(f"Web Unlocker returned empty for {url}")
         except Exception as e:
-            logger.warning(f"Web Unlocker REST API failed for {url}: {e}")
+            logger.warning(f"Standard zone failed for {url}: {e}")
 
-        # Debug: try with mobile UA
+        # Tier 3: Mobile UA
         try:
             result = await self._web_unlocker_rest_api(url, country="us", mobile=True)
             if result:
-                logger.info(f"Web Unlocker succeeded with mobile UA for {url}")
+                logger.info(f"Mobile UA success for {url}")
                 return result
         except Exception as e:
-            logger.debug(f"Web Unlocker mobile attempt failed: {e}")
+            logger.debug(f"Mobile UA failed: {e}")
 
-        # Fallback to CLI subprocess with debug timing
+        # Tier 4: Scraping Browser (strongest — full browser with fingerprinting)
+        browser_ws = settings.brightdata_browser_ws
+        if browser_ws:
+            try:
+                content = await self._scraping_browser_fetch(url, browser_ws)
+                if content:
+                    logger.info(f"Scraping Browser success for {url}")
+                    return content
+            except Exception as e:
+                logger.warning(f"Scraping Browser failed for {url}: {e}")
+
+        # Tier 5: CLI fallback
         logger.info(f"Falling back to CLI for {url}")
-        args = ["scrape", url, "--country", "us", "--timing"]
         try:
-            output = await self._run_cli(*args, timeout=90)
+            output = await self._run_cli("scrape", url, "--country", "us", "--timing", timeout=90)
             if output:
                 return output
         except BrightDataClientError as e:
-            logger.warning(f"CLI fallback failed for {url}: {e}")
+            logger.warning(f"CLI failed for {url}: {e}")
 
+        logger.warning(f"All Web Unlocker tiers exhausted for {url}")
         return ""
 
     async def _web_unlocker_rest_api(
-        self, url: str, country: Optional[str] = None, mobile: bool = False
+        self, url: str, country: Optional[str] = None, mobile: bool = False, zone: Optional[str] = None
     ) -> str:
         """Fetch URL via Bright Data Web Unlocker REST API directly.
 
@@ -137,9 +161,9 @@ class BrightDataClient:
 
         For Premium Domains (high-difficulty sites like nytimes.com):
         Create a zone with Premium Domains enabled in the Bright Data
-        Control Panel, then set BRIGHTDATA_ZONE to that zone name.
+        Control Panel, then set BRIGHTDATA_PREMIUM_ZONE to that zone name.
         """
-        zone = settings.brightdata_zone or "cli_unlocker"
+        zone = zone or settings.brightdata_zone or "cli_unlocker"
         payload = {
             "zone": zone,
             "url": url,
@@ -342,8 +366,43 @@ class BrightDataClient:
             return []
 
     # ------------------------------------------------------------------ #
-    # Scraping Browser
+    # Scraping Browser — Premium fallback via WebSocket
     # ------------------------------------------------------------------ #
+
+    async def _scraping_browser_fetch(self, url: str, ws_endpoint: str) -> str:
+        """Fetch page content via Bright Data Scraping Browser WebSocket.
+
+        This is the strongest anti-detection tier — uses a real headless
+        browser with fingerprinting, CAPTCHA solving, and JS rendering.
+        Slower and more expensive than Web Unlocker, but succeeds on sites
+        that block automated HTTP requests.
+
+        Args:
+            url: Target URL to navigate to.
+            ws_endpoint: WebSocket endpoint (wss://...).
+
+        Returns:
+            Page HTML content as string, or empty string on failure.
+        """
+        try:
+            import asyncio
+            from playwright.async_api import async_playwright
+
+            async with async_playwright() as p:
+                browser = await p.chromium.connect_over_cdp(ws_endpoint)
+                page = await browser.new_page()
+                page.set_default_navigation_timeout(60000)
+                await page.goto(url, wait_until="domcontentloaded")
+                content = await page.content()
+                await browser.close()
+                logger.info(f"Scraping Browser fetched {url} ({len(content)} bytes)")
+                return content
+        except ImportError:
+            logger.warning("playwright not installed — cannot use Scraping Browser fallback")
+            return ""
+        except Exception as e:
+            logger.warning(f"Scraping Browser failed for {url}: {e}")
+            return ""
 
     async def scraping_browser_navigate(
         self, url: str, country: Optional[str] = None

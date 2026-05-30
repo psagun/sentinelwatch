@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     brightdata_username: str = ""
     brightdata_api_base: str = "https://api.brightdata.com"
     brightdata_zone: str = ""
+    brightdata_premium_zone: str = ""
+    brightdata_browser_ws: str = ""
 
     # AI/ML API
     aiml_api_key: str = ""
