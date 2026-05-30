@@ -33,6 +33,21 @@ const SCAN_OPTIONS = [
   { key: 'scraping_browser', label: 'Scraping Browser', icon: <Eye size={14} />, desc: 'JS rendering & client-side analysis' },
 ];
 
+const COUNTRY_OPTIONS = [
+  { key: 'us', label: '🇺🇸 United States' },
+  { key: 'gb', label: '🇬🇧 United Kingdom' },
+  { key: 'de', label: '🇩🇪 Germany' },
+  { key: 'fr', label: '🇫🇷 France' },
+  { key: 'ca', label: '🇨🇦 Canada' },
+  { key: 'au', label: '🇦🇺 Australia' },
+  { key: 'jp', label: '🇯🇵 Japan' },
+  { key: 'in', label: '🇮🇳 India' },
+  { key: 'br', label: '🇧🇷 Brazil' },
+  { key: 'sg', label: '🇸🇬 Singapore' },
+  { key: 'nl', label: '🇳🇱 Netherlands' },
+  { key: 'se', label: '🇸🇪 Sweden' },
+];
+
 const COMPLIANCE_OPTIONS = [
   { key: 'GDPR', label: 'GDPR', color: 'text-blue-400 border-blue-500/30' },
   { key: 'SOC2', label: 'SOC 2', color: 'text-accent-cyan border-accent-cyan/30' },
@@ -57,6 +72,9 @@ export default function AddEntityModal({ open, onClose, onComplete }: AddEntityM
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
   const [showConfig, setShowConfig] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState('us');
+  const [premiumMode, setPremiumMode] = useState(false);
+  const [mobileUA, setMobileUA] = useState(false);
   const [scanConfig, setScanConfig] = useState({
     scans: ['web_unlocker', 'serp', 'scraping_browser'],
     compliance: ['GDPR', 'SOC2', 'HIPAA', 'PCI_DSS'],
@@ -119,7 +137,7 @@ export default function AddEntityModal({ open, onClose, onComplete }: AddEntityM
       const entity = await monitorEntity({
         url: url.trim(),
         name: name || undefined,
-        scan_config: scanConfig,
+        scan_config: { ...scanConfig, country: selectedCountry, premium: premiumMode, mobile_ua: mobileUA },
       });
       setEntityId(entity.id);
     } catch (e: any) {
@@ -266,6 +284,40 @@ export default function AddEntityModal({ open, onClose, onComplete }: AddEntityM
                       ))}
                     </div>
                     <p className="text-[10px] text-text-muted/60 mt-1">Choose which Bright Data products to use for scanning</p>
+                  </div>
+
+                  {/* Geo-targeting & Advanced Options */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">Geo-targeting &amp; Device</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={selectedCountry}
+                        onChange={(e) => setSelectedCountry(e.target.value)}
+                        className="h-8 px-2.5 bg-surface-200 border border-border rounded-lg text-[11px] text-text-primary font-medium
+                                   focus:outline-none focus:border-accent-cyan/40 transition-colors"
+                      >
+                        {COUNTRY_OPTIONS.map((c) => (
+                          <option key={c.key} value={c.key}>{c.label}</option>
+                        ))}
+                      </select>
+                      <label className={`flex items-center gap-1.5 px-2.5 h-8 rounded-md text-[11px] font-medium border cursor-pointer transition-all ${
+                        premiumMode
+                          ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30'
+                          : 'bg-surface-200 text-text-muted border-border hover:border-border-light'
+                      }`}>
+                        <input type="checkbox" checked={premiumMode} onChange={(e) => setPremiumMode(e.target.checked)} className="sr-only" />
+                        ⚡ Premium
+                      </label>
+                      <label className={`flex items-center gap-1.5 px-2.5 h-8 rounded-md text-[11px] font-medium border cursor-pointer transition-all ${
+                        mobileUA
+                          ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30'
+                          : 'bg-surface-200 text-text-muted border-border hover:border-border-light'
+                      }`}>
+                        <input type="checkbox" checked={mobileUA} onChange={(e) => setMobileUA(e.target.checked)} className="sr-only" />
+                        📱 Mobile UA
+                      </label>
+                    </div>
+                    <p className="text-[10px] text-text-muted/60 mt-1">Exit country for Bright Data proxy &amp; premium anti-detection mode</p>
                   </div>
 
                   {/* Compliance Frameworks */}

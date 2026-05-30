@@ -16,6 +16,9 @@ export interface MonitorRequest {
     scans: string[];
     compliance: string[];
     checks: string[];
+    country?: string;
+    premium?: boolean;
+    mobile_ua?: boolean;
   };
 }
 

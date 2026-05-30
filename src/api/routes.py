@@ -63,6 +63,9 @@ class ScanConfig(BaseModel):
     scans: List[str] = ["web_unlocker", "serp", "scraping_browser"]
     compliance: List[str] = ["GDPR", "SOC2", "HIPAA", "PCI_DSS"]
     checks: List[str] = ["headers", "ssl", "server_info", "well_known", "browser"]
+    country: Optional[str] = "us"
+    premium: Optional[bool] = False
+    mobile_ua: Optional[bool] = False
 
 
 class MonitorRequest(BaseModel):
