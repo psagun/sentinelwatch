@@ -545,9 +545,12 @@ async def _run_entity_scan(entity: Dict[str, Any]):
         entity["finding_count"] = len(analysis.findings)
         entity["scan_status"] = "completed"
 
-        # Create alerts for critical/high findings
+        # Create alerts for critical/high findings (skip monitoring-infrastructure issues)
+        INFRA_CHECK_TYPES = {"accessibility", "browser"}
         for f in analysis.findings:
             sev = f.get("severity", "info")
+            if f.get("check_type") in INFRA_CHECK_TYPES:
+                continue
             if sev in ("critical", "high"):
                 _alerts_db.append({
                     "id": str(uuid.uuid4()),

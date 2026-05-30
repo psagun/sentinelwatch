@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { getDashboardMetrics } from '../api/client';
 import type { DashboardMetrics } from '../types';
 import { Shield, CheckCircle, AlertTriangle, ExternalLink, Filter, ChevronDown } from 'lucide-react';
+import PageMeta from '../components/PageMeta';
 
 const regColors: Record<string, string> = {
   GDPR: 'border-blue-500/30',
@@ -69,7 +70,12 @@ export default function Compliance() {
   const regs = Object.entries(summary);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+      <PageMeta id="compliance" description="Compliance analysis mapping security findings against regulatory frameworks."
+        features={['Per-regulation severity breakdown (critical, high, medium, low)','Coverage by GDPR, SOC 2, HIPAA, and PCI DSS','Article-level finding mapping','Compliance gap analysis','Entity-level compliance filtering']}
+        endpoints={['GET /api/v1/dashboard/summary']}
+        technicalNotes="Findings auto-classified by ComplianceClassifier against regulatory keywords. Compliance summary computed server-side from all findings with compliance tags." />
+      <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col items-center gap-3 text-center">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Compliance Overview</h1>
@@ -180,5 +186,5 @@ export default function Compliance() {
         ))}
       </div>
     </div>
-  );
+  </>);
 }

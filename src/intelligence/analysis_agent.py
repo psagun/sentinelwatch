@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from src.config import settings
-from src.intelligence.risk_scorer import RiskScorer
+from src.intelligence.risk_scorer import RiskScorer, SEVERITY_WEIGHTS
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +125,11 @@ class AnalysisAgent:
         entity_name: str,
     ) -> AnalysisResult:
         """Use AI/ML API to classify findings and generate a report."""
+        if len(findings) > 50:
+            logger.warning(
+                "Truncated %d findings to 50 for AI analysis",
+                len(findings),
+            )
         findings_input = [
             {
                 "title": f.get("title", ""),
@@ -132,7 +137,7 @@ class AnalysisAgent:
                 "source": f.get("source_type", ""),
                 "url": f.get("source_url", ""),
             }
-            for f in findings[:15]
+            for f in findings[:50]
         ]
 
         prompt = f"""You are a security analyst. Analyze these findings for "{entity_name}":
@@ -165,6 +170,7 @@ Return JSON with keys: "findings" (array of {title, severity, finding_type, risk
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": 2000,
                     "temperature": 0.1,
+                    "response_format": {"type": "json_object"},
                 },
             )
             response.raise_for_status()
@@ -190,7 +196,20 @@ Return JSON with keys: "findings" (array of {title, severity, finding_type, risk
             f["remediation"] = ai.get("remediation", "Review and assess.")
             enriched.append(f)
 
-        risk_result = self.risk_scorer.score(enriched)
+        # Use AI's overall_risk_score as primary when available, fall back to RiskScorer
+        ai_overall_score = result.get("overall_risk_score")
+        if ai_overall_score is not None:
+            severity_counts = {}
+            for f in enriched:
+                sev = f.get("severity", "info")
+                severity_counts[sev] = severity_counts.get(sev, 0) + 1
+            risk_result = {
+                "score": float(ai_overall_score),
+                "level": self.risk_scorer._score_to_level(float(ai_overall_score)),
+                "finding_counts": severity_counts,
+            }
+        else:
+            risk_result = self.risk_scorer.score(enriched)
 
         return AnalysisResult(
             findings=enriched,
@@ -226,7 +245,7 @@ Return JSON with keys: "findings" (array of {title, severity, finding_type, risk
 
             f["severity"] = f.get("severity", severity)
             f["finding_type"] = f.get("finding_type", finding_type)
-            f["risk_score"] = f.get("risk_score", 5.0)
+            f["risk_score"] = f.get("risk_score", SEVERITY_WEIGHTS.get(f["severity"], 1.0))
             f["description"] = f.get("description", f.get("summary", ""))
             f["remediation"] = RECOMMENDATIONS.get(f["severity"], "Review.")
             enriched.append(f)

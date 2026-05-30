@@ -445,9 +445,10 @@ class WebScraper:
                 title=f"Website unreachable via Bright Data proxy",
                 description=(
                     f"Could not fetch {self.target_url} through the Bright Data Web Unlocker. "
-                    f"The site may be blocking automated access, or the URL may be invalid."
+                    f"This is a monitoring infrastructure note — the site may be blocking "
+                    f"automated access, which is often a positive anti-bot signal."
                 ),
-                severity="high",
+                severity="low",
                 check_type="accessibility",
             ))
         else:

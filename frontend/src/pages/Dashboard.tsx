@@ -11,6 +11,7 @@ import { getAlerts } from '../api/client';
 import type { Alert } from '../types';
 import { Shield, AlertTriangle, Globe, Activity, CheckCircle, Filter, Bug, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import PageMeta from '../components/PageMeta';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -69,13 +70,18 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-accent-cyan border-t-transparent rounded-full animate-spin" />
-          <p className="text-text-muted text-sm">Loading dashboard...</p>
-        </div>
+      <>
+        <PageMeta id="dashboard" description="Real-time security posture overview with risk scoring, severity distribution, timeline trends, and active alerts."
+          features={['Overall risk score gauge (0-100)','Severity distribution chart (critical, high, medium, low)','Finding trends timeline (14-day)','Entity filter for per-entity scoping','Recent findings list with severity badges','Active alerts panel with quick-acknowledge']}
+          endpoints={['GET /api/v1/dashboard/summary','GET /api/v1/alerts']}
+          technicalNotes="Dashboard aggregates data from all entities. Entity filter passes entity_id for server-side filtering. Risk score from RiskScorer or AI analysis. Timeline is 14-day rolling window." />
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-accent-cyan border-t-transparent rounded-full animate-spin" />
+            <p className="text-text-muted text-sm">Loading dashboard...</p>
+          </div>
       </div>
-    );
+    </>);
   }
 
   if (!metrics) {
@@ -87,7 +93,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+      <PageMeta id="dashboard" description="Real-time security posture overview with risk scoring, severity distribution, timeline trends, and active alerts."
+        features={['Overall risk score gauge (0-100)','Severity distribution chart','Finding trends timeline (14-day)','Entity filter','Recent findings list with severity badges','Active alerts panel']}
+        endpoints={['GET /api/v1/dashboard/summary','GET /api/v1/alerts']}
+        technicalNotes="Dashboard aggregates data from all entities. Entity filter passes entity_id for server-side filtering." />
+      <div className="space-y-6 animate-fade-in">
       {/* Header with entity filter */}
       <div className="flex flex-col items-center gap-3 text-center">
         <div>
@@ -264,5 +275,5 @@ export default function Dashboard() {
         <AlertList alerts={filteredAlerts.slice(0, 5)} />
       </div>
     </div>
-  );
+  </>);
 }

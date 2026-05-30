@@ -3,6 +3,7 @@ import { getAlerts, deleteAlert, acknowledgeAlert } from '../api/client';
 import type { Alert } from '../types';
 import AlertList from '../components/AlertList';
 import { Filter, ChevronDown, CheckSquare, Square, Trash2, CheckCircle2 } from 'lucide-react';
+import PageMeta from '../components/PageMeta';
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -97,7 +98,12 @@ export default function Alerts() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+      <PageMeta id="alerts" description="Security alerts requiring attention with batch acknowledge and delete capabilities."
+        features={['Entity filter dropdown','Batch acknowledge','Batch delete','Individual delete','Alert-to-finding linking','Unacknowledged count']}
+        endpoints={['GET /api/v1/alerts','POST /api/v1/alerts/{id}/acknowledge','DELETE /api/v1/alerts/{id}']}
+        technicalNotes="Alerts auto-generated from critical/high severity findings during entity scans. Linked to findings via finding_id. Supports status and severity query params." />
+      <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col items-center gap-3 text-center">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Alerts</h1>
@@ -209,5 +215,5 @@ export default function Alerts() {
         onToggleSelectAll={toggleSelectAll}
       />
     </div>
-  );
+  </>);
 }

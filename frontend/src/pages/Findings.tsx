@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getFindings, deleteFinding } from '../api/client';
 import type { Finding } from '../types';
 import FindingsTable from '../components/FindingsTable';
+import PageMeta from '../components/PageMeta';
 
 export default function Findings() {
   const [findings, setFindings] = useState<Finding[]>([]);
@@ -37,7 +38,12 @@ export default function Findings() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+      <PageMeta id="findings" description="All security findings across monitored entities with severity classification, compliance tags, and AI analysis."
+        features={['Severity filtering (critical, high, medium, low, info)','Entity filtering','Paginated list with Load More','Individual finding deletion','Compliance classification tags','Source type identification']}
+        endpoints={['GET /api/v1/findings','DELETE /api/v1/findings/{id}']}
+        technicalNotes="Findings come from Bright Data collectors (Web Unlocker, SERP, Scraping Browser) and are enriched by AnalysisAgent (AI/ML API). Supports query params: severity, entity_id, finding_type, limit, offset." />
+      <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-xl font-bold text-text-primary">Findings</h1>
         <p className="text-sm text-text-muted mt-1">
@@ -63,5 +69,5 @@ export default function Findings() {
         </div>
       )}
     </div>
-  );
+  </>);
 }

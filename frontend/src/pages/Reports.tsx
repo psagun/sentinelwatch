@@ -6,6 +6,7 @@ import {
   AlertTriangle, CheckCircle, Activity, ExternalLink, Download, Bug, Eye, Server,
   Terminal, ShieldCheck, AlertOctagon, Lightbulb, ArrowRight, Info, Sparkles, Loader2, FileCode2
 } from 'lucide-react';
+import PageMeta from '../components/PageMeta';
 import { mdToHtml } from '../utils/markdown';
 
 const sevColor = (s: string) =>

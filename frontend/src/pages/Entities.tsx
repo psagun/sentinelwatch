@@ -3,6 +3,7 @@ import { getEntities, rescanEntity, deleteEntity } from '../api/client';
 import type { Entity } from '../types';
 import { Globe, Search, Plus, RotateCw, ExternalLink, AlertTriangle, Shield, Trash2 } from 'lucide-react';
 import AddEntityModal from '../components/AddEntityModal';
+import PageMeta from '../components/PageMeta';
 
 const riskColor = (score: number) =>
   score >= 70 ? 'text-accent-red' : score >= 40 ? 'text-accent-amber' : 'text-accent-green';
@@ -95,7 +96,12 @@ export default function Entities() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+      <PageMeta id="entities" description="Manage monitored websites and services with live security scanning, risk scores, and scan status."
+        features={['Add Website with configurable scan options','Search/filter entities','Per-entity risk score with Low/Medium/High label','Scan status tracking (Pending, Scanning, Completed, Failed)','Rescan individual entities','Delete entities with cleanup','10+ point security checks per entity']}
+        endpoints={['GET /api/v1/entities','POST /api/v1/entities/monitor','POST /api/v1/entities/{id}/rescan','DELETE /api/v1/entities/{id}']}
+        technicalNotes="Entity scan runs Bright Data Web Unlocker, SERP API, and Scraping Browser in parallel. Findings analyzed by AI/ML API Claude. Configurable scan types, compliance frameworks, and security checks per entity." />
+      <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -264,5 +270,5 @@ export default function Entities() {
         onComplete={() => fetchEntities()}
       />
     </div>
-  );
+  </>);
 }
