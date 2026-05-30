@@ -31,6 +31,10 @@ export default function App() {
   const activePage: NavPage = pageMap[location.pathname] || 'dashboard';
 
   const handleNavigate = (page: NavPage) => {
+    if (page === 'presentation') {
+      window.open('/presentation/index.html', '_blank');
+      return;
+    }
     const pathMap: Record<NavPage, string> = {
       dashboard: '/',
       findings: '/findings',
@@ -38,6 +42,7 @@ export default function App() {
       entities: '/entities',
       compliance: '/compliance',
       reports: '/reports',
+      presentation: '/presentation/',
       about: '/about',
       hackathon: '/hackathon',
     };

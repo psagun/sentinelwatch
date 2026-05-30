@@ -20,6 +20,7 @@ from src.intelligence.analysis_agent import AnalysisAgent
 from src.api.schemas import ScanRequest
 from src import database as db
 from src.compliance.classifier import classify_findings, get_compliance_summary
+from src.memory.cognee_client import cognee
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -560,9 +561,100 @@ async def _run_entity_scan(entity: Dict[str, Any]):
                     "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 })
 
+        # Store entity context in Cognee memory
+        asyncio.create_task(_store_entity_memory(entity, analysis.findings))
+
     except Exception as e:
         logger.error(f"Entity scan failed for {name}: {e}", exc_info=True)
         entity["scan_status"] = "failed"
+
+
+async def _store_entity_memory(entity: Dict[str, Any], findings: List[Dict[str, Any]]) -> None:
+    """Store entity scan results in Cognee memory for persistent context."""
+    name = entity.get("name", "Unknown")
+    entity_id = entity.get("id", "")
+
+    # Store entity profile in Cognee
+    await cognee.store_finding(
+        entity_id=entity_id,
+        finding_type="entity_scan",
+        content={
+            "entity_name": name,
+            "entity_type": entity.get("entity_type", ""),
+            "url": entity.get("metadata", {}).get("url", ""),
+            "domains": entity.get("metadata", {}).get("domains", []),
+            "keywords": entity.get("metadata", {}).get("keywords", []),
+            "risk_score": entity.get("current_risk_score", 0.0),
+            "finding_count": len(findings),
+            "scan_status": entity.get("scan_status", ""),
+            "last_assessed": entity.get("last_assessed", ""),
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        },
+    )
+
+    # Store critical/high findings individually for semantic recall
+    for f in findings:
+        sev = f.get("severity", "info")
+        if sev in ("critical", "high", "medium"):
+            await cognee.store_finding(
+                entity_id=entity_id,
+                finding_type=f.get("finding_type", "unknown"),
+                content={
+                    "title": f.get("title", ""),
+                    "description": f.get("description", ""),
+                    "severity": sev,
+                    "source_url": f.get("source_url", ""),
+                    "check_type": f.get("check_type", ""),
+                    "entity_name": name,
+                    "risk_score": f.get("risk_score", 0),
+                    "timestamp": f.get("created_at", ""),
+                },
+            )
+
+    logger.info(f"Stored Cognee memory for entity: {name} ({len(findings)} findings)")
+
+
+async def _seed_cognee_memory(findings: List[Dict[str, Any]], entities: List[Dict[str, Any]]) -> None:
+    """Seed Cognee memory with demo data after /seed endpoint."""
+    for entity in entities:
+        name = entity.get("name", "Unknown")
+        entity_id = entity.get("id", "")
+        entity_findings = [f for f in findings if f.get("entity_id") == name]
+
+        if not entity_findings:
+            continue
+
+        # Store entity profile
+        await cognee.store_finding(
+            entity_id=entity_id,
+            finding_type="entity_profile",
+            content={
+                "entity_name": name,
+                "entity_type": entity.get("entity_type", ""),
+                "url": entity.get("metadata", {}).get("url", ""),
+                "risk_score": entity.get("current_risk_score", 0),
+                "finding_count": len(entity_findings),
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            },
+        )
+
+        # Store each finding
+        for f in entity_findings:
+            await cognee.store_finding(
+                entity_id=entity_id,
+                finding_type=f.get("finding_type", "unknown"),
+                content={
+                    "title": f.get("title", ""),
+                    "description": f.get("description", ""),
+                    "severity": f.get("severity", "info"),
+                    "source_url": f.get("source_url", ""),
+                    "entity_name": name,
+                    "risk_score": f.get("risk_score", 0),
+                    "timestamp": f.get("created_at", ""),
+                },
+            )
+
+        logger.info(f"Seeded Cognee memory: {name} ({len(entity_findings)} findings)")
 
 
 @router.post("/entities/monitor")
@@ -664,6 +756,52 @@ async def rescan_entity(entity_id: str):
 
     asyncio.create_task(_run_entity_scan(entity))
     return {"status": "scan_queued", "entity_id": entity_id}
+
+
+# ── Cognee Memory Endpoints ───────────────────────────────────── #
+
+@router.get("/memory/{entity_id}")
+async def get_entity_memory(entity_id: str):
+    """Get persistent memory context for an entity from Cognee."""
+    context = await cognee.get_entity_context(entity_id)
+    if context.get("memory_count", 0) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No Cognee memory found for entity {entity_id}",
+        )
+    return context
+
+
+@router.get("/memory/{entity_id}/findings")
+async def get_similar_findings(
+    entity_id: str,
+    query: str = "",
+    limit: int = 5,
+):
+    """Query Cognee for similar findings across entity memory."""
+    if not query:
+        raise HTTPException(
+            status_code=400,
+            detail="Query parameter is required",
+        )
+    results = await cognee.query_memory(query, entity_id=entity_id, limit=limit)
+    return {"results": results, "count": len(results)}
+
+
+@router.get("/memory")
+async def list_all_memory():
+    """List all entities with Cognee memory (returns entity_ids with memory count)."""
+    summary = {}
+    for entity in _entities_db:
+        ctx = await cognee.get_entity_context(entity["id"])
+        if ctx.get("memory_count", 0) > 0:
+            summary[entity["name"]] = {
+                "entity_id": entity["id"],
+                "memory_count": ctx["memory_count"],
+                "last_assessed": entity.get("last_assessed", ""),
+                "risk_score": entity.get("current_risk_score", 0),
+            }
+    return {"entities": summary, "total": len(summary)}
 
 
 # ── Dashboard ──────────────────────────────────────────────────── #
@@ -1195,6 +1333,9 @@ async def seed_demo_data():
             entity["current_risk_score"] = 45.0
             entity["last_assessed"] = now().isoformat()
         await db.save_entity(entity)
+
+    # Seed Cognee memory with demo findings (fire-and-forget)
+    asyncio.create_task(_seed_cognee_memory(sample_findings, _entities_db))
 
     return {
         "status": "seeded",

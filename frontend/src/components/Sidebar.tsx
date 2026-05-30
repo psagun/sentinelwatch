@@ -8,6 +8,7 @@ import {
   Info,
   Award,
   FileText,
+  Presentation,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ const navItems: { page: NavPage; label: string; icon: React.ReactNode }[] = [
   { page: 'entities', label: 'Entities', icon: <Globe size={18} /> },
   { page: 'compliance', label: 'Compliance', icon: <ShieldCheck size={18} /> },
   { page: 'reports', label: 'Reports', icon: <FileText size={18} /> },
+  { page: 'presentation', label: 'Presentation', icon: <Presentation size={18} /> },
   { page: 'about', label: 'About', icon: <Info size={18} /> },
   { page: 'hackathon', label: 'Hackathon', icon: <Award size={18} /> },
 ];

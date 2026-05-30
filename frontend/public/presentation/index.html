@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SentinelWatch — Hackathon Submission</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   VIEWPORT BASE — Fixed 16:9 Stage
+   ═══════════════════════════════════════════ */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #05080f; }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: #05080f; }
+.deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; }
+.slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block; visibility: hidden; opacity: 0; pointer-events: none; }
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+@media print {
+  html,body { width: 1920px; height: auto; overflow: visible; background: #05080f; }
+  .deck-viewport { position: static; overflow: visible; }
+  .deck-stage { position: static; width: auto; height: auto; transform: none !important; }
+  .slide { position: relative; display: block !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; width: 1920px; height: 1080px; break-after: page; }
+  .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; } }
+
+/* ═══════════════════════════════════════════
+   THEME — BIGGER FONTS FOR READABILITY
+   ═══════════════════════════════════════════ */
+:root {
+  --bg: #05080f; --surface: rgba(13,18,30,0.85); --border: rgba(32,212,200,0.12);
+  --border-glow: rgba(32,212,200,0.25);
+  --cyan: #20d4c8; --cyan-bright: #2ef7e9;
+  --red: #ef4444; --amber: #f59e0b; --purple: #8b5cf6; --blue: #3b82f6; --green: #22c55e;
+  --text: #eef2f8; --text-muted: #8891a8; --text-dim: #4a5269;
+  --display: 'Sora', system-ui, sans-serif;
+  --body: 'DM Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+
+  /* BASE FONT SIZES — dramatically larger */
+  --t-title: 92px;
+  --t-h2: 56px;
+  --t-h3: 28px;
+  --t-body: 24px;
+  --t-card: 22px;
+  --t-small: 16px;
+  --t-tiny: 13px;
+}
+
+/* ═══════════════════════════════════════════
+   COMMON
+   ═══════════════════════════════════════════ */
+.slide-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(32,212,200,0.03) 0%, transparent 70%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(139,92,246,0.04) 0%, transparent 70%), var(--bg); }
+.slide-inner { position: absolute; inset: 0; padding: 60px 90px; display: flex; flex-direction: column; }
+.grid-overlay { position: absolute; inset: 0; background-image: linear-gradient(rgba(32,212,200,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(32,212,200,0.03) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; }
+
+h1, h2, h3, h4, p, li, span { margin: 0; }
+h1, h2, h3 { font-family: var(--display); }
+p, li { font-family: var(--body); }
+code, .mono { font-family: var(--mono); }
+
+.section-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 18px; border-radius: 100px;
+  font-family: var(--mono); font-size: var(--t-small);
+  font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  background: rgba(32,212,200,0.08); border: 1px solid rgba(32,212,200,0.15);
+  color: var(--cyan); margin-bottom: 20px;
+}
+
+.slide-title {
+  font-size: var(--t-h2); font-weight: 800;
+  letter-spacing: -1px; line-height: 1.2;
+  color: var(--text);
+}
+.slide-title .hl { background: linear-gradient(135deg, var(--cyan), var(--cyan-bright)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.slide-sub {
+  font-size: var(--t-body); font-weight: 400;
+  color: var(--text-muted); margin-top: 10px;
+  max-width: 800px; line-height: 1.5;
+}
+.divider { width: 60px; height: 3px; background: linear-gradient(90deg, var(--cyan), transparent); border-radius: 2px; margin: 16px 0 24px; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px 24px;
+  backdrop-filter: blur(8px);
+}
+.card h3 { font-size: var(--t-h3); font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.card p { font-size: var(--t-card); color: var(--text-muted); line-height: 1.5; }
+.card-icon { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 14px; }
+
+.metric-box {
+  text-align: center; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px 16px;
+}
+.metric-box .num { font-family: var(--mono); font-size: 48px; font-weight: 700; color: var(--cyan); }
+.metric-box .num.red { color: var(--red); }
+.metric-box .num.amber { color: var(--amber); }
+.metric-box .num.purple { color: var(--purple); }
+.metric-box .mlabel { font-size: var(--t-small); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 8px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+.grid-6 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 12px; }
+
+/* Screenshot frames */
+.ss { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.ss img { width: 100%; display: block; border-bottom: 1px solid var(--border); }
+.ss .cap { padding: 12px 16px; font-size: var(--t-tiny); font-weight: 500; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.ss .cap .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+
+/* Architecture */
+.a-flow { display: flex; align-items: center; }
+.a-step { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+.a-step .ai { font-size: 34px; margin-bottom: 4px; }
+.a-step .an { font-size: 20px; font-weight: 700; color: var(--text); font-family: var(--display); }
+.a-step .ad { font-size: var(--t-tiny); color: var(--text-muted); margin-top: 4px; font-family: var(--body); }
+.a-arr { font-size: 18px; color: var(--cyan); padding: 0 8px; flex-shrink: 0; }
+
+/* Pipeline */
+.pipe { display: flex; align-items: stretch; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+.pipe-step { flex: 1; padding: 20px 16px; text-align: center; background: var(--surface); border-right: 1px solid var(--border); }
+.pipe-step:last-child { border-right: none; }
+.pipe-step .pi { font-size: 30px; margin-bottom: 4px; }
+.pipe-step .pl { font-size: var(--t-card); font-weight: 700; color: var(--text); font-family: var(--display); }
+.pipe-step .pd { font-size: var(--t-tiny); color: var(--text-muted); margin-top: 4px; font-family: var(--body); }
+
+/* Tech tags */
+.tt { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; font-size: var(--t-small); font-weight: 600; background: rgba(13,18,30,0.6); border: 1px solid var(--border); color: var(--text); font-family: var(--body); }
+.tt.cy { border-color: rgba(32,212,200,0.3); color: var(--cyan); }
+.tt.pu { border-color: rgba(139,92,246,0.3); color: var(--purple); }
+.tr { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Title slide */
+#s1 .slide-bg { background: radial-gradient(ellipse 70% 50% at 50% 20%, rgba(32,212,200,0.06) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 80% 80%, rgba(139,92,246,0.05) 0%, transparent 60%), var(--bg); }
+.t-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; border-radius: 100px; font-family: var(--mono); font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; background: linear-gradient(135deg, rgba(32,212,200,0.1), rgba(139,92,246,0.1)); border: 1px solid rgba(32,212,200,0.2); color: var(--cyan); margin-bottom: 24px; }
+.t-h1 { font-size: var(--t-title); font-weight: 900; letter-spacing: -2px; line-height: 1.05; }
+.t-h1 .g { background: linear-gradient(135deg, #eef2f8 30%, var(--cyan) 70%, var(--purple) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.t-sub { font-size: 28px; color: var(--text-muted); max-width: 750px; margin: 14px 0 0; font-weight: 400; line-height: 1.4; font-family: var(--body); }
+.t-meta { display: flex; gap: 36px; margin-top: 44px; }
+.t-meta span { display: flex; align-items: center; gap: 10px; font-size: var(--t-card); color: var(--text-muted); font-family: var(--body); }
+
+.btn { display: inline-flex; align-items: center; gap: 10px; padding: 16px 36px; border-radius: 10px; font-family: var(--display); font-size: 18px; font-weight: 700; text-decoration: none; transition: all 0.2s; cursor: pointer; }
+.btn-p { background: linear-gradient(135deg, var(--cyan), #1ab8ad); color: #05080f; border: none; box-shadow: 0 4px 20px rgba(32,212,200,0.25); }
+.btn-p:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(32,212,200,0.35); }
+.btn-o { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn-o:hover { border-color: var(--border-glow); background: rgba(32,212,200,0.04); }
+
+/* Glow orbs */
+.go { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; }
+.go.cy { background: rgba(32,212,200,0.08); }
+.go.pu { background: rgba(139,92,246,0.07); }
+
+/* Slide number */
+.sn { position: absolute; bottom: 28px; right: 40px; font-family: var(--mono); font-size: var(--t-tiny); font-weight: 500; color: var(--text-dim); letter-spacing: 2px; }
+
+/* Progress dots */
+.pd { position: fixed; right: 24px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
+.pd button { width: 10px; height: 10px; border-radius: 50%; border: none; cursor: pointer; background: rgba(255,255,255,0.12); transition: all 0.3s; padding: 0; }
+.pd button.act { background: var(--cyan); box-shadow: 0 0 10px rgba(32,212,200,0.4); width: 12px; height: 12px; }
+
+/* Animations */
+@keyframes fu { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+.au { animation: fu 0.5s ease-out both; }
+.d1 { animation-delay: 0.1s; } .d2 { animation-delay: 0.2s; } .d3 { animation-delay: 0.3s; }
+.d4 { animation-delay: 0.4s; } .d5 { animation-delay: 0.5s; } .d6 { animation-delay: 0.6s; }
+.d7 { animation-delay: 0.7s; } .d8 { animation-delay: 0.8s; }
+
+/* Closing box */
+.cb { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px; }
+
+/* Big stat */
+.big-stat { text-align: center; }
+.big-stat .bn { font-family: var(--mono); font-size: 72px; font-weight: 700; color: var(--cyan); line-height: 1; }
+.big-stat .bn.red { color: var(--red); }
+.big-stat .bn.amber { color: var(--amber); }
+.big-stat .bl { font-size: var(--t-card); color: var(--text-muted); margin-top: 8px; font-family: var(--body); }
+</style>
+</head>
+<body>
+<div class="deck-viewport"><div class="deck-stage" id="stage">
+
+<!-- ═══ SLIDE 1: TITLE ═══ -->
+<div class="slide active" id="s1">
+  <div class="slide-bg"></div>
+  <div class="grid-overlay"></div>
+  <div class="go cy" style="width:500px;height:500px;top:-100px;right:-100px;"></div>
+  <div class="go pu" style="width:400px;height:400px;bottom:-50px;left:-50px;"></div>
+  <div class="slide-inner" style="justify-content:center;align-items:center;text-align:center;">
+    <div class="t-badge">🏆 LabLab Hackathon 2026</div>
+    <h1 class="t-h1"><span class="g">SentinelWatch</span></h1>
+    <p class="t-sub">AI-Powered Security &amp; Compliance Monitoring Platform</p>
+    <div class="t-meta">
+      <span>🔍 <strong>Bright Data</strong> — Web Unlocker, SERP, Scraping Browser</span>
+      <span>🧠 <strong>AI/ML API</strong> — Claude Opus Analysis</span>
+    </div>
+    <div style="margin-top:44px;display:flex;gap:20px;">
+      <a class="btn btn-p" href="https://frontend-lilac-eta-55.vercel.app" target="_blank">🌐 Live Demo</a>
+      <a class="btn btn-o" href="https://github.com/psagun/sentinelwatch" target="_blank">📖 GitHub Repository</a>
+    </div>
+  </div>
+  <div class="sn">01 / 09</div>
+</div>
+
+<!-- ═══ SLIDE 2: PROBLEM ═══ -->
+<div class="slide" id="s2">
+  <div class="slide-bg"></div>
+  <div class="go" style="width:400px;height:400px;top:20%;right:-50px;background:rgba(239,68,68,0.04);"></div>
+  <div class="slide-inner" style="justify-content:center;">
+    <div style="max-width:1000px;margin:0 auto;width:100%;">
+      <div class="section-tag">⌨️ The Challenge</div>
+      <h2 class="slide-title">Security monitoring is&nbsp;<span class="hl">broken</span></h2>
+      <p class="slide-sub">Teams juggle scattered tools — SSL checkers, brand monitors, compliance scanners. No unified view, no AI context, and vulnerability discovery stays reactive.</p>
+      <div class="divider"></div>
+      <div class="grid-3" style="margin-top:12px;">
+        <div class="card au d2">
+          <div class="card-icon" style="background:rgba(239,68,68,0.1);">🔴</div>
+          <h3>Reactive Security</h3>
+          <p>Teams learn about vulnerabilities after they're exploited. No continuous, automated threat surface monitoring.</p>
+        </div>
+        <div class="card au d3">
+          <div class="card-icon" style="background:rgba(245,158,11,0.1);">🟡</div>
+          <h3>Tool Sprawl</h3>
+          <p>SSL checkers, brand monitors, compliance scanners — each is a separate tool with separate dashboards and no unified view.</p>
+        </div>
+        <div class="card au d4">
+          <div class="card-icon" style="background:rgba(32,212,200,0.1);">🟢</div>
+          <h3>No AI Context</h3>
+          <p>Raw security data lacks analysis. Teams need AI to correlate findings, assess risk, and prioritize remediation.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">02 / 09</div>
+</div>
+
+<!-- ═══ SLIDE 3: SOLUTION ═══ -->
+<div class="slide" id="s3">
+  <div class="slide-bg"></div>
+  <div class="go cy" style="width:350px;height:350px;top:30%;left:-60px;"></div>
+  <div class="slide-inner" style="justify-content:center;">
+    <div class="section-tag">🛠️ Solution</div>
+    <h2 class="slide-title">What SentinelWatch does</h2>
+    <p class="slide-sub">A unified platform that continuously monitors your web assets, analyzes findings with AI, and alerts you before damage is done.</p>
+    <div class="divider"></div>
+    <div class="grid-2" style="margin-top:8px;">
+      <div class="card au d1">
+        <div class="card-icon" style="background:rgba(32,212,200,0.1);">🌐</div>
+        <h3>Web Security Scanning</h3>
+        <p>Bright Data Web Unlocker probes for security.txt, SSL validity, security headers (CSP, HSTS), and mixed content — bypassing anti-bot protection.</p>
+      </div>
+      <div class="card au d2">
+        <div class="card-icon" style="background:rgba(139,92,246,0.1);">🔎</div>
+        <h3>Threat Intelligence</h3>
+        <p>Bright Data SERP API searches Google, Krebs, BleepingComputer, CVE feeds, and paste sites for entity-specific threats and leaked credentials.</p>
+      </div>
+      <div class="card au d3">
+        <div class="card-icon" style="background:rgba(59,130,246,0.1);">🛡️</div>
+        <h3>Brand &amp; Exposure Monitoring</h3>
+        <p>Detects phishing domains, brand impersonation, dark web mentions, and credential leaks across public repositories and paste sites.</p>
+      </div>
+      <div class="card au d4">
+        <div class="card-icon" style="background:rgba(34,197,94,0.1);">📋</div>
+        <h3>Compliance Analysis</h3>
+        <p>Auto-classifies findings against GDPR, SOC 2, HIPAA, and PCI DSS frameworks with per-regulation severity reporting and gap analysis.</p>
+      </div>
+    </div>
+  </div>
+  <div class="sn">03 / 09</div>
+</div>
+
+<!-- ═══ SLIDE 4: BRIGHT DATA ═══ -->
+<div class="slide" id="s4">
+  <div class="slide-bg"></div>
+  <div class="go pu" style="width:400px;height:400px;top:20%;right:-80px;"></div>
+  <div class="slide-inner" style="justify-content:center;">
+    <div class="section-tag">🔍 Powered by Bright Data</div>
+    <h2 class="slide-title">Three products, one&nbsp;pipeline</h2>
+    <p class="slide-sub">Bright Data's web data platform enables SentinelWatch to collect intelligence at scale</p>
+    <div class="divider"></div>
+    <div class="grid-3" style="margin-top:8px;">
+      <div class="card au d1" style="text-align:center;padding:36px 24px;">
+        <div style="font-size:56px;margin-bottom:10px;">🌐</div>
+        <h3 style="font-size:32px;">Web Unlocker</h3>
+        <p style="font-size:20px;margin-top:6px;">Fetches page content while bypassing CAPTCHAs, anti-bot measures, and geo-blocks. Used for security.txt, robots.txt, SSL checks, and page accessibility analysis.</p>
+      </div>
+      <div class="card au d2" style="text-align:center;padding:36px 24px;">
+        <div style="font-size:56px;margin-bottom:10px;">🔎</div>
+        <h3 style="font-size:32px;">SERP API</h3>
+        <p style="font-size:20px;margin-top:6px;">Real-time search engine results for threat intel. Searches Google, news, and blogs for CVEs, leaked credentials, phishing domains, and brand mentions.</p>
+      </div>
+      <div class="card au d3" style="text-align:center;padding:36px 24px;">
+        <div style="font-size:56px;margin-bottom:10px;">🌍</div>
+        <h3 style="font-size:32px;">Scraping Browser</h3>
+        <p style="font-size:20px;margin-top:6px;">Full headless browser with JS rendering. Detects third-party scripts, inline JavaScript, mixed content, and client-side security signals.</p>
+      </div>
+    </div>
+  </div>
+  <div class="sn">04 / 09</div>
+</div>
+
+<!-- ═══ SLIDE 5: ARCHITECTURE + DATA FLOW ═══ -->
+<div class="slide" id="s5">
+  <div class="slide-bg"></div>
+  <div class="go cy" style="width:300px;height:300px;top:40%;left:40%;"></div>
+  <div class="slide-inner" style="justify-content:center;">
+    <div class="section-tag">⚙️ Engine</div>
+    <h2 class="slide-title">Architecture &amp; data flow</h2>
+    <p class="slide-sub">Zero-cost production infrastructure serving a global CDN</p>
+    <div class="divider"></div>
+
+    <div class="a-flow" style="margin-bottom:12px;">
+      <div class="a-step au d1" style="flex:1.2;">
+        <div class="ai">🌐</div>
+        <div class="an">Vercel</div>
+        <div class="ad">React + Vite — Global CDN</div>
+      </div>
+      <div class="a-arr">→</div>
+      <div class="a-step au d2" style="flex:1.2;">
+        <div class="ai">⚡</div>
+        <div class="an">Railway</div>
+        <div class="ad">FastAPI Backend — PostgreSQL</div>
+      </div>
+      <div class="a-arr">→</div>
+      <div class="a-step au d3" style="flex:1.3;border-color:rgba(32,212,200,0.3);">
+        <div class="ai">🔍</div>
+        <div class="an">Bright Data</div>
+        <div class="ad">Web Unlocker + SERP + Browser</div>
+      </div>
+      <div class="a-arr">→</div>
+      <div class="a-step au d4" style="flex:1.2;">
+        <div class="ai">🧠</div>
+        <div class="an">AI/ML API</div>
+        <div class="ad">Claude Opus — Analysis</div>
+      </div>
+    </div>
+
+    <div class="pipe" style="margin-bottom:20px;">
+      <div class="pipe-step au d1"><div class="pi">➕</div><div class="pl">Add Entity</div><div class="pd">Enter a URL or domain</div></div>
+      <div class="pipe-step au d2"><div class="pi">🔍</div><div class="pl">Bright Data</div><div class="pd">Scrape + Search + Render</div></div>
+      <div class="pipe-step au d3"><div class="pi">🧠</div><div class="pl">AI Analysis</div><div class="pd">Risk scoring + classification</div></div>
+      <div class="pipe-step au d4"><div class="pi">📋</div><div class="pl">Compliance</div><div class="pd">GDPR, SOC 2, HIPAA, PCI DSS</div></div>
+      <div class="pipe-step au d5"><div class="pi">🔔</div><div class="pl">Alert</div><div class="pd">Email / Slack / Dashboard</div></div>
+      <div class="pipe-step au d6"><div class="pi">🧠</div><div class="pl">Cognee</div><div class="pd">Persistent memory</div></div>
+    </div>
+
+    <div style="display:flex;gap:12px;">
+      <span class="tt">▲ Vercel — Frontend CDN</span>
+      <span class="tt">🚂 Railway — Backend + DB</span>
+      <span class="tt cy">🔍 Bright Data — Web Intelligence</span>
+      <span class="tt">🧠 AI/ML API — Claude Analysis</span>
+      <span class="tt pu">💾 Cognee — Entity Memory</span>
+    </div>
+  </div>
+  <div class="sn">05 / 09</div>
+</div>
+
+<!-- ═══ SLIDE 6: SCREENSHOTS ═══ -->
+<div class="slide" id="s6">
+  <div class="slide-bg"></div>
+  <div class="slide-inner" style="padding:50px 70px;justify-content:center;">
+    <div class="section-tag">🖥️ Live App</div>
+    <h2 class="slide-title" style="font-size:48px;">Application screenshots</h2>
+    <p class="slide-sub">Real data from the live deployment — <strong>20+ findings</strong>, <strong>4 compliance frameworks</strong>, <strong>real-time alerting</strong></p>
+    <div class="divider" style="margin-bottom:12px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;">
+      <div class="ss au d1" style="align-self:start;">
+        <img src="screenshot-dashboard.png" alt="Dashboard">
+        <div class="cap"><span class="dot"></span> Dashboard — real-time security posture overview with risk gauge and severity distribution</div>
+      </div>
+      <div class="ss au d2" style="align-self:start;">
+        <img src="screenshot-findings.png" alt="Findings">
+        <div class="cap"><span class="dot"></span> Findings — Bright Data intelligence results with severity filtering</div>
+      </div>
+      <div class="ss au d3" style="align-self:start;">
+        <img src="screenshot-entities.png" alt="Entities">
+        <div class="cap"><span class="dot"></span> Entities — monitored websites with scan status and risk scores</div>
+      </div>
+      <div class="ss au d4" style="align-self:start;">
+        <img src="screenshot-compliance.png" alt="Compliance">
+        <div class="cap"><span class="dot"></span> Compliance — Finding classification against GDPR, SOC 2, HIPAA, PCI DSS</div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">06 / 09</div>
+</div>
+
+<!-- ═══ SLIDE 7: KEY METRICS ═══ -->
+<div class="slide" id="s7">
+  <div class="slide-bg"></div>
+  <div class="go pu" style="width:400px;height:400px;top:-80px;right:-80px;"></div>
+  <div class="slide-inner" style="justify-content:center;">
+    <div class="section-tag">📊 Impact</div>
+    <h2 class="slide-title">Key metrics &amp; capabilities</h2>
+    <p class="slide-sub">Built with modern, production-grade tools — zero monthly cost for demo usage</p>
+    <div class="divider"></div>
+    <div class="grid-4" style="margin-top:12px;">
+      <div class="metric-box au d1"><div class="num">20+</div><div class="mlabel">Security Checks<br>Per Entity</div></div>
+      <div class="metric-box au d2"><div class="num">4</div><div class="mlabel">Compliance<br>Frameworks</div></div>
+      <div class="metric-box au d3"><div class="num amber">Real-time</div><div class="mlabel">Bright Data<br>Intelligence</div></div>
+      <div class="metric-box au d4"><div class="num purple">AI</div><div class="mlabel">Analysis<br>Agent</div></div>
+    </div>
+    <div style="margin-top:20px;">
+      <div class="section-tag" style="margin-bottom:12px;">⚡ Technology Stack</div>
+      <div class="tr" style="margin-bottom:10px;">
+        <span class="tt">⚛️ React 18</span>
+        <span class="tt">📘 TypeScript</span>
+        <span class="tt">🎨 Tailwind CSS</span>
+        <span class="tt">⚡ Vite</span>
+        <span class="tt">📊 Recharts</span>
+        <span class="tt">🎯 Lucide Icons</span>
+      </div>
+      <div class="tr" style="margin-bottom:10px;">
+        <span class="tt">🐍 Python 3.14</span>
+        <span class="tt">⚡ FastAPI</span>
+        <span class="tt">🔄 Uvicorn</span>
+        <span class="tt">🐘 asyncpg</span>
+        <span class="tt">🔗 httpx</span>
+        <span class="tt">🐳 Docker</span>
+      </div>
+      <div class="tr">
+        <span class="tt cy">🔍 Bright Data</span>
+        <span class="tt">🧠 AI/ML API (Claude)</span>
+        <span class="tt pu">🧠 Cognee Memory</span>
+        <span class="tt">▲ Vercel</span>
+        <span class="tt">🚂 Railway</span>
+        <span class="tt">🐘 PostgreSQL</span>
+      </div>
+    </div>
+  </div>
+  <div class="sn">07 / 09</div>
+</div>
+
+<!-- ═══ SLIDE 8: INFRASTRUCTURE + COST ═══ -->
+<div class="slide" id="s8">
+  <div class="slide-bg"></div>
+  <div class="go cy" style="width:400px;height:400px;bottom:-100px;left:-80px;"></div>
+  <div class="slide-inner" style="justify-content:center;">
+    <div class="section-tag">☁️ Infrastructure</div>
+    <h2 class="slide-title">Deployed &amp; production-ready</h2>
+    <p class="slide-sub">Fully deployed on free tiers — accessible from anywhere</p>
+    <div class="divider"></div>
+
+    <div class="grid-3" style="margin-top:8px;">
+      <div class="card au d1" style="text-align:center;padding:36px 24px;">
+        <div style="font-size:52px;margin-bottom:10px;">▲</div>
+        <h3 style="font-size:32px;">Vercel</h3>
+        <p style="font-size:20px;margin-top:6px;">React frontend on global CDN, auto SSL, instant deploys from GitHub, SPA route rewrites to Railway.</p>
+        <div style="margin-top:12px;font-family:var(--mono);font-size:14px;color:var(--text-dim);">frontend-lilac-eta-55.vercel.app</div>
+      </div>
+      <div class="card au d2" style="text-align:center;padding:36px 24px;">
+        <div style="font-size:52px;margin-bottom:10px;">🚂</div>
+        <h3 style="font-size:32px;">Railway</h3>
+        <p style="font-size:20px;margin-top:6px;">FastAPI with auto-deploy from GitHub, managed PostgreSQL, built-in secrets management, health monitoring.</p>
+        <div style="margin-top:12px;font-family:var(--mono);font-size:14px;color:var(--text-dim);">sentinelwatch-backend-production.up.railway.app</div>
+      </div>
+      <div class="card au d3" style="text-align:center;padding:36px 24px;">
+        <div style="font-size:52px;margin-bottom:10px;">🐘</div>
+        <h3 style="font-size:32px;">PostgreSQL</h3>
+        <p style="font-size:20px;margin-top:6px;">Managed database via Railway. In-memory stores for fast reads with write-through to PostgreSQL via asyncpg.</p>
+      </div>
+    </div>
+
+    <div class="cb au d4" style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <h3 style="font-size:24px;margin-bottom:8px;">📊 Deployment Summary</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 32px;font-size:18px;color:var(--text-muted);">
+          <div><strong style="color:var(--text);">Frontend:</strong> Vercel (free)</div>
+          <div><strong style="color:var(--text);">Backend:</strong> Railway ($0 credit)</div>
+          <div><strong style="color:var(--text);">Database:</strong> PostgreSQL</div>
+          <div><strong style="color:var(--text);">CI/CD:</strong> Auto from GitHub</div>
+          <div><strong style="color:var(--text);">SSL:</strong> Automatic</div>
+          <div><strong style="color:var(--text);">Cost:</strong> $0/month demo</div>
+        </div>
+      </div>
+      <a class="btn btn-p" href="https://frontend-lilac-eta-55.vercel.app" target="_blank">🌐 Live Demo</a>
+    </div>
+  </div>
+  <div class="sn">08 / 09</div>
+</div>
+
+<!-- ═══ SLIDE 9: CLOSING ═══ -->
+<div class="slide" id="s9">
+  <div class="slide-bg"></div>
+  <div class="go cy" style="width:600px;height:600px;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+  <div class="slide-inner" style="justify-content:center;align-items:center;text-align:center;">
+    <div class="t-badge">🚀 LabLab Hackathon 2026</div>
+    <h1 class="t-h1"><span class="g">Thank You!</span></h1>
+    <p class="t-sub" style="max-width:900px;">SentinelWatch — AI-powered security monitoring powered by Bright Data, analyzed by AI/ML API, and deployed on Vercel + Railway.</p>
+    <div style="margin-top:40px;display:flex;gap:20px;justify-content:center;">
+      <a class="btn btn-p" href="https://frontend-lilac-eta-55.vercel.app" target="_blank">🌐 Live Demo</a>
+      <a class="btn btn-o" href="https://github.com/psagun/sentinelwatch" target="_blank">📖 GitHub Repository</a>
+    </div>
+    <div style="margin-top:40px;display:flex;gap:40px;justify-content:center;font-size:20px;color:var(--text-muted);font-family:var(--body);">
+      <span>🔍 <strong style="color:var(--text);">Bright Data</strong> — Web Unlocker · SERP · Scraping Browser</span>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:40px;justify-content:center;font-size:20px;color:var(--text-muted);font-family:var(--body);">
+      <span>🧠 <strong style="color:var(--text);">AI/ML API</strong> — Claude Opus Analysis</span>
+      <span>💾 <strong style="color:var(--text);">Cognee</strong> — Persistent Memory</span>
+    </div>
+  </div>
+  <div class="sn">09 / 09</div>
+</div>
+
+</div></div>
+
+<!-- Controls -->
+<div class="deck-controls">
+  <button id="pBtn" style="padding:12px 24px;border-radius:8px 0 0 8px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.5);color:white;font-size:20px;cursor:pointer;border-right:none;backdrop-filter:blur(8px);">←</button>
+  <span id="sCtr" style="padding:12px 20px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.5);color:var(--text-muted);font-family:var(--mono);font-size:16px;backdrop-filter:blur(8px);">1 / 9</span>
+  <button id="nBtn" style="padding:12px 24px;border-radius:0 8px 8px 0;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.5);color:white;font-size:20px;cursor:pointer;backdrop-filter:blur(8px);">→</button>
+</div>
+<div class="pd" id="pDots"></div>
+
+<script>
+(function() {
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let cur = 0;
+  const dots = document.getElementById('pDots');
+  for (let i = 0; i < total; i++) {
+    const b = document.createElement('button');
+    b.dataset.index = i;
+    if (i === 0) b.className = 'act';
+    b.addEventListener('click', () => go(i));
+    dots.appendChild(b);
+  }
+  function go(idx) {
+    if (idx < 0) idx = 0; if (idx >= total) idx = total - 1;
+    slides.forEach((s, i) => { s.classList.toggle('active', i === idx); s.classList.toggle('visible', i === idx); });
+    document.querySelectorAll('.pd button').forEach((d, i) => d.classList.toggle('act', i === idx));
+    document.getElementById('sCtr').textContent = (idx + 1) + ' / ' + total;
+    cur = idx;
+  }
+  document.getElementById('pBtn').addEventListener('click', () => go(cur - 1));
+  document.getElementById('nBtn').addEventListener('click', () => go(cur + 1));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(cur + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(cur - 1); }
+  });
+  function scale() {
+    const vp = document.querySelector('.deck-viewport');
+    const st = document.getElementById('stage');
+    const w = vp.clientWidth, h = vp.clientHeight;
+    const s = Math.min(w / 1920, h / 1080);
+    st.style.transform = `translate(${(w - 1920 * s) / 2}px, ${(h - 1080 * s) / 2}px) scale(${s})`;
+  }
+  window.addEventListener('resize', scale);
+  scale();
+})();
+</script>
+</body>
+</html>

@@ -92,4 +92,4 @@ export interface DashboardMetrics {
   }>;
 }
 
-export type NavPage = 'dashboard' | 'findings' | 'alerts' | 'entities' |  'compliance' | 'reports' | 'about' | 'hackathon';
+export type NavPage = 'dashboard' | 'findings' | 'alerts' | 'entities' |  'compliance' | 'reports' | 'about' | 'hackathon' | 'presentation';
