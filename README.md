@@ -103,6 +103,21 @@ sentinelwatch/
 - **TriggerWare.ai** — Event-driven workflows triggered by web data changes
 - **Speechmatics** — Optional voice-enabled alerting and reporting
 
+## Demo
+
+Watch the product demo or flip through the presentation:
+
+- **📹 Demo Script** — [`docs/demo-script.md`](docs/demo-script.md) — A ~3-minute narrated walkthrough covering entity monitoring, findings, alerts, compliance, and AI reports
+- **📊 Presentation** — Open the slide deck at [`/presentation/`](https://frontend-lilac-eta-55.vercel.app/presentation/index.html) (10 slides with screenshots)
+- **🌐 Live App** — [frontend-lilac-eta-55.vercel.app](https://frontend-lilac-eta-55.vercel.app)
+- **📄 PDF** — Download the presentation as PDF from the slide deck (Ctrl+P → Save as PDF, Landscape, A3)
+
+### Demo Flow
+
+```
+Entities → Add Website → Configure Scans → Scan Runs → Dashboard → Findings → Alerts → Compliance → AI Reports
+```
+
 ## License
 
 Hackathon project — see hackathon terms.
