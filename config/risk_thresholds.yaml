@@ -1,0 +1,54 @@
+# SentinelWatch Risk Scoring Thresholds
+
+severe_thresholds:
+  critical:
+    min_score: 90
+    description: "Immediate action required — active threat or breach"
+    auto_notify: true
+    channels: [pagerduty, slack, email]
+    sla_minutes: 15
+
+  high:
+    min_score: 70
+    description: "Urgent — requires investigation within 4 hours"
+    auto_notify: true
+    channels: [slack, email]
+    sla_minutes: 240
+
+  medium:
+    min_score: 40
+    description: "Investigate within 24 hours"
+    auto_notify: true
+    channels: [slack]
+    sla_minutes: 1440
+
+  low:
+    min_score: 20
+    description: "Awareness — no immediate action"
+    auto_notify: false
+    channels: []
+    sla_minutes: null
+
+  info:
+    min_score: 0
+    description: "Informational only"
+    auto_notify: false
+    channels: []
+    sla_minutes: null
+
+risk_scoring:
+  recency_multiplier: 1.5        # Weight multiplier for findings < 24h
+  max_findings_for_score: 100    # Cap findings considered per score
+  trend_window_days: 14          # Window for trend calculation
+
+severity_weights:
+  critical: 10.0
+  high: 7.5
+  medium: 5.0
+  low: 2.5
+  info: 1.0
+
+alert_dedup:
+  enabled: true
+  window_minutes: 60             # Skip duplicate alerts within this window
+  max_daily_alerts_per_entity: 50

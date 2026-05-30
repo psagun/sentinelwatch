@@ -1,0 +1,68 @@
+# SentinelWatch Monitoring Configuration
+
+# Defines the cadence, sources, and parameters for each monitoring workflow.
+
+global:
+  timezone: UTC
+  default_country: US
+  default_language: en
+
+monitoring_workflows:
+  threat_intelligence:
+    enabled: true
+    interval_minutes: 15
+    sources:
+      - cve_feeds
+      - security_blogs
+      - paste_sites
+      - dark_web_forums
+      - social_media
+      - exploit_databases
+    search_depth: 5             # Results per query
+    recency_window_days: 7      # Only consider recent items
+
+  compliance:
+    enabled: true
+    interval_minutes: 360       # Every 6 hours
+    regulations:
+      - name: GDPR
+        jurisdiction: EU/EEA
+        priority: high
+      - name: CCPA
+        jurisdiction: California, USA
+        priority: high
+      - name: SEC
+        jurisdiction: USA
+        priority: medium
+      - name: NIST
+        jurisdiction: USA
+        priority: medium
+      - name: ISO 27001
+        jurisdiction: International
+        priority: medium
+
+  third_party_risk:
+    enabled: true
+    interval_minutes: 1440      # Daily
+    assessment_categories:
+      - security_incidents
+      - financial_health
+      - leadership_changes
+      - regulatory_actions
+      - reputation_risk
+
+  brand_monitoring:
+    enabled: true
+    interval_minutes: 60
+    detection_types:
+      - credential_leaks
+      - phishing_domains
+      - code_exposure
+      - dark_web_mentions
+      - impersonation
+
+bright_data:
+  retry_attempts: 3
+  retry_delay_seconds: 5
+  request_timeout_seconds: 60
+  max_concurrent_requests: 10

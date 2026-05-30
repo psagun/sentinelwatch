@@ -1,0 +1,94 @@
+# SentinelWatch Compliance Monitoring Sources
+
+# Structured configuration for regulatory data collection.
+# Each regulation defines URLs, selectors, and monitoring parameters.
+
+regulations:
+  gdpr:
+    full_name: "General Data Protection Regulation"
+    jurisdiction: "EU/EEA"
+    monitoring_priority: high
+    sources:
+      - url: "https://gdpr.eu"
+        type: "primary_information"
+        check_frequency_hours: 12
+      - url: "https://ec.europa.eu/commission/presscorner"
+        type: "official_updates"
+        check_frequency_hours: 6
+        search_terms:
+          - "GDPR"
+          - "data protection"
+          - "personal data"
+      - url: "https://edpb.europa.eu/news"
+        type: "regulatory_guidance"
+        check_frequency_hours: 24
+    keywords:
+      - "GDPR amendment"
+      - "data protection regulation"
+      - "DPA decision"
+      - "binding corporate rules"
+      - "standard contractual clauses"
+
+  ccpa:
+    full_name: "California Consumer Privacy Act"
+    jurisdiction: "California, USA"
+    monitoring_priority: high
+    sources:
+      - url: "https://oag.ca.gov/privacy/ccpa"
+        type: "official_updates"
+        check_frequency_hours: 24
+      - url: "https://cppa.ca.gov"
+        type: "regulatory_body"
+        check_frequency_hours: 12
+    keywords:
+      - "CCPA amendment"
+      - "CPRA"
+      - "California privacy"
+      - "CPPA regulation"
+
+  sec:
+    full_name: "Securities and Exchange Commission"
+    jurisdiction: "USA"
+    monitoring_priority: medium
+    sources:
+      - url: "https://www.sec.gov/rules"
+        type: "rulemaking"
+        check_frequency_hours: 6
+      - url: "https://www.sec.gov/news/pressreleases"
+        type: "press_releases"
+        check_frequency_hours: 6
+    keywords:
+      - "cybersecurity rule"
+      - "SEC regulation"
+      - "disclosure requirement"
+      - "cyber incident reporting"
+
+  nist:
+    full_name: "National Institute of Standards and Technology"
+    jurisdiction: "USA"
+    monitoring_priority: medium
+    sources:
+      - url: "https://www.nist.gov/cyberframework"
+        type: "framework_updates"
+        check_frequency_hours: 24
+      - url: "https://csrc.nist.gov"
+        type: "publications"
+        check_frequency_hours: 24
+    keywords:
+      - "NIST CSF"
+      - "cybersecurity framework"
+      - "NIST SP 800"
+      - "NIST update"
+
+  iso_27001:
+    full_name: "ISO/IEC 27001 Information Security Management"
+    jurisdiction: "International"
+    monitoring_priority: medium
+    sources:
+      - url: "https://www.iso.org/standards.html"
+        type: "standards_updates"
+        check_frequency_hours: 48
+    keywords:
+      - "ISO 27001"
+      - "information security management"
+      - "ISO amendment"
