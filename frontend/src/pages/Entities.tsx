@@ -164,26 +164,10 @@ export default function Entities() {
           return (
             <div
               key={entity.id}
-              className="widget group hover:border-accent-cyan/20 transition-all relative"
+              className="widget group hover:border-accent-cyan/20 transition-all relative pt-4 pb-4"
             >
-              {/* Scan status badge */}
-              <div className="absolute top-3 right-3">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold border ${badge.class} ${
-                    entity.scan_status === 'scanning' ? 'animate-pulse' : ''
-                  }`}
-                >
-                  {entity.scan_status === 'scanning' && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-amber" />
-                  )}
-                  {entity.scan_status === 'failed' && (
-                    <AlertTriangle size={10} />
-                  )}
-                  {badge.label}
-                </span>
-              </div>
-
-              <div className="flex items-start justify-between mb-3">
+              {/* Top row: icon + name + scan status */}
+              <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-accent-purple/15 flex items-center justify-center">
                     <Globe size={18} className="text-accent-purple" />
@@ -193,17 +177,42 @@ export default function Entities() {
                     <p className="text-[11px] text-text-muted capitalize">{entity.entity_type}</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <div
-                    className={`px-2.5 py-1 rounded-md text-xs font-bold font-mono border ${riskBg(entity.current_risk_score)} ${riskColor(entity.current_risk_score)}`}
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-semibold border ${badge.class} ${
+                      entity.scan_status === 'scanning' ? 'animate-pulse' : ''
+                    }`}
                   >
+                    {entity.scan_status === 'scanning' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-amber" />
+                    )}
+                    {entity.scan_status === 'failed' && (
+                      <AlertTriangle size={10} />
+                    )}
+                    {badge.label}
+                  </span>
+                  <div className={`px-2.5 py-1 rounded-md text-xs font-bold font-mono border ${riskBg(entity.current_risk_score)} ${riskColor(entity.current_risk_score)}`}>
                     {entity.current_risk_score.toFixed(0)}
                   </div>
-                  <span className={`text-[10px] font-medium ${riskColor(entity.current_risk_score)}`}>
-                    {riskLabel(entity.current_risk_score)}
-                  </span>
                 </div>
               </div>
+
+              {/* Risk label */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`text-[11px] font-semibold ${riskColor(entity.current_risk_score)}`}>
+                  {riskLabel(entity.current_risk_score)}
+                </span>
+                {entity.finding_count > 0 && (
+                  <>
+                    <span className="text-text-muted/30">·</span>
+                    <span className="font-mono text-[11px] text-text-secondary">
+                      {entity.finding_count} finding{entity.finding_count !== 1 ? 's' : ''}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Bottom info bar */}
               <div className="flex items-center justify-between text-xs text-text-muted border-t border-border pt-3">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[11px] text-text-muted/70">
