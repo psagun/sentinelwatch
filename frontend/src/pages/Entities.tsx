@@ -12,11 +12,14 @@ const riskBg = (score: number) =>
     ? 'bg-amber-500/10 border-amber-500/20'
     : 'bg-green-500/10 border-green-500/20';
 
+const riskLabel = (score: number) =>
+  score >= 70 ? 'High Risk' : score >= 40 ? 'Medium Risk' : 'Low Risk';
+
 const scanBadge: Record<string, { label: string; class: string }> = {
-  pending:   { label: 'Pending',  class: 'bg-slate-500/10 text-text-secondary border-slate-500/20' },
-  scanning:  { label: 'Scanning', class: 'bg-amber-500/10 text-accent-amber border-accent-amber/20' },
+  pending:   { label: 'Pending',   class: 'bg-slate-500/10 text-text-secondary border-slate-500/20' },
+  scanning:  { label: 'Scanning',  class: 'bg-amber-500/10 text-accent-amber border-accent-amber/20' },
   completed: { label: 'Completed', class: 'bg-green-500/10 text-accent-green border-green-500/20' },
-  failed:    { label: 'Failed',   class: 'bg-red-500/10 text-accent-red border-red-500/20' },
+  failed:    { label: 'Failed',    class: 'bg-red-500/10 text-accent-red border-red-500/20' },
 };
 
 export default function Entities() {
@@ -181,21 +184,34 @@ export default function Entities() {
               </div>
 
               <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-accent-purple/15 flex items-center justify-center">
-                  <Globe size={18} className="text-accent-purple" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-accent-purple/15 flex items-center justify-center">
+                    <Globe size={18} className="text-accent-purple" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">{entity.name}</h3>
+                    <p className="text-[11px] text-text-muted capitalize">{entity.entity_type}</p>
+                  </div>
                 </div>
-                <div
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold font-mono border ${riskBg(entity.current_risk_score)} ${riskColor(entity.current_risk_score)}`}
-                >
-                  {entity.current_risk_score.toFixed(0)}
+                <div className="flex flex-col items-end gap-1">
+                  <div
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold font-mono border ${riskBg(entity.current_risk_score)} ${riskColor(entity.current_risk_score)}`}
+                  >
+                    {entity.current_risk_score.toFixed(0)}
+                  </div>
+                  <span className={`text-[10px] font-medium ${riskColor(entity.current_risk_score)}`}>
+                    {riskLabel(entity.current_risk_score)}
+                  </span>
                 </div>
               </div>
-              <h3 className="text-sm font-semibold text-text-primary mb-1">{entity.name}</h3>
-              <p className="text-xs text-text-muted mb-3 capitalize">{entity.entity_type}</p>
               <div className="flex items-center justify-between text-xs text-text-muted border-t border-border pt-3">
                 <div className="flex items-center gap-2">
-                  <span>
-                    {entity.metadata?.domains?.join(', ') || '—'}
+                  <span className="font-mono text-[11px] text-text-muted/70">
+                    {(() => {
+                      const u = entity.metadata?.url || '';
+                      try { return new URL(u.startsWith('http') ? u : 'https://' + u).hostname.replace(/^www\./, ''); }
+                      catch { return entity.metadata?.domains?.join(', ') || u || '—'; }
+                    })()}
                   </span>
                   {entity.finding_count > 0 && (
                     <>
