@@ -2,6 +2,7 @@
 
 import asyncio
 import datetime
+import json
 import logging
 import uuid
 
@@ -465,6 +466,7 @@ def _normalize_finding(obj: Any, entity_name: str) -> Dict[str, Any]:
         "risk_score": 0.0,
         "created_at": now.isoformat(),
         "updated_at": None,
+        "is_source_monitoring": d.get("is_source_monitoring", False),
     }
 
 
@@ -536,18 +538,34 @@ async def _run_entity_scan(entity: Dict[str, Any]):
             f["entity_id"] = name
         # Add compliance classification tags
         analysis.findings = classify_findings(analysis.findings)
+
+        # Tag any remaining source-monitoring findings not already flagged
+        # (catch-all for any compliance collector findings that missed the flag)
+        SOURCE_MONITOR_DOMAINS = {"gdpr.eu", "iso.org"}
+        for f in analysis.findings:
+            if not f.get("is_source_monitoring"):
+                src_url = f.get("source_url", "")
+                title = f.get("title", "")
+                if any(d in src_url for d in SOURCE_MONITOR_DOMAINS):
+                    f["is_source_monitoring"] = True
+                elif "Potential" in title and "change detected" in title:
+                    f["is_source_monitoring"] = True
+
         _findings_db.extend(analysis.findings)
 
-        # Update entity
+        # Update entity — only count non-source-monitoring findings as entity findings
+        real_findings = [f for f in analysis.findings if not f.get("is_source_monitoring")]
         risk = analysis.risk_score
         entity["current_risk_score"] = risk.get("score", 0.0)
         entity["last_assessed"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        entity["finding_count"] = len(analysis.findings)
+        entity["finding_count"] = len(real_findings)
         entity["scan_status"] = "completed"
 
-        # Create alerts for critical/high findings (skip monitoring-infrastructure issues)
+        # Create alerts for critical/high findings (skip monitoring-infrastructure and source-monitoring)
         INFRA_CHECK_TYPES = {"accessibility", "browser"}
         for f in analysis.findings:
+            if f.get("is_source_monitoring"):
+                continue
             sev = f.get("severity", "info")
             if f.get("check_type") in INFRA_CHECK_TYPES:
                 continue
@@ -699,12 +717,13 @@ async def monitor_entity(request: MonitorRequest):
 
 @router.get("/entities/{entity_id}")
 async def get_entity(entity_id: str):
-    """Get a single entity with live finding count."""
+    """Get a single entity with live finding count (excluding source-monitoring)."""
     for e in _entities_db:
         if e["id"] == entity_id:
             e["finding_count"] = sum(
                 1 for f in _findings_db
                 if f.get("entity_id") == e["name"]
+                and not f.get("is_source_monitoring")
             )
             return e
     raise HTTPException(status_code=404, detail="Entity not found")
@@ -931,13 +950,13 @@ DATA:
 - Active Alerts: {sum(1 for a in _alerts_db if a.get('status') != 'acknowledged')}
 
 ENTITIES:
-{__import__('json').dumps(entities_summary, indent=2)}
+{json.dumps(entities_summary, indent=2)}
 
 FINDINGS:
-{__import__('json').dumps(findings_summary, indent=2)}
+{json.dumps(findings_summary, indent=2)}
 
 ALERTS:
-{__import__('json').dumps(alerts_summary, indent=2)}
+{json.dumps(alerts_summary, indent=2)}
 
 Write a professional narrative security report with these sections:
 1. **Executive Summary** — Overall security posture in 2-3 paragraphs
@@ -949,10 +968,17 @@ Write a professional narrative security report with these sections:
 7. **Prioritized Remediation Plan** — Action items grouped by urgency (Immediate 24h, Short-term 7d, Medium-term 30d)
 8. **Recommendations** — Strategic improvements for security posture
 
-Format as professional markdown with clear sections, bullet points, and data-driven insights. Be specific — reference actual finding titles and entity names. Do NOT use placeholder text."""
+IMPORTANT GUIDELINES:
+- SERP/OSINT findings (e.g., "Potential paste mention") are INTELLIGENCE LEADS, not confirmed breaches. Classify as HIGH at most, never CRITICAL, until human verification.
+- "Website unreachable via proxy" and "browser render failure" are MONITORING INFRASTRUCTURE NOTES. Mention them only as operational context, NOT as findings against the entity.
+- Compliance source monitoring (gdpr.eu, iso.org changes) is ENVIRONMENTAL INTELLIGENCE. Note separately from entity security findings.
+- Do NOT map to PCI DSS or HIPAA unless the entity type indicates cardholder data or PHI handling.
+- A block by a major news site (NYTimes.com) is likely benign anti-automation — note as a positive signal, not a vulnerability.
+- Alert resolution rate is meaningful only with >7 days history. For new alerts, just note their generation time.
+
+Format as professional markdown. Be specific — reference actual finding titles and entity names."""
 
     try:
-        import json
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 f"{settings.aiml_api_base}/v1/chat/completions",

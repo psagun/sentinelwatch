@@ -33,6 +33,7 @@ class ComplianceFinding:
         effective_date: Optional[str] = None,
         entity_id: Optional[str] = None,
         raw_data: Optional[str] = None,
+        is_source_monitoring: bool = False,
     ):
         self.regulation = regulation
         self.jurisdiction = jurisdiction
@@ -46,6 +47,7 @@ class ComplianceFinding:
         self.raw_data = raw_data
         self.timestamp = datetime.now(timezone.utc)
         self.finding_type = "compliance"
+        self.is_source_monitoring = is_source_monitoring
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -60,6 +62,7 @@ class ComplianceFinding:
             "effective_date": self.effective_date,
             "entity_id": self.entity_id,
             "timestamp": self.timestamp.isoformat(),
+            "is_source_monitoring": self.is_source_monitoring,
         }
 
 
@@ -135,10 +138,16 @@ class ComplianceCollector:
                     freshness="30d",
                 )
                 for item in news[:5]:
+                    item_url = item.get("url", "")
+                    # Mark news items from regulatory source domains as source monitoring
+                    is_src_mon = any(
+                        domain in item_url
+                        for domain in ["gdpr.eu", "iso.org"]
+                    )
                     findings.append(ComplianceFinding(
                         regulation=regulation["name"],
                         jurisdiction=regulation["jurisdiction"],
-                        source_url=item.get("url", ""),
+                        source_url=item_url,
                         title=item.get("title", ""),
                         summary=item.get("snippet", ""),
                         change_type=self._classify_change(
@@ -147,6 +156,7 @@ class ComplianceCollector:
                         impact_level=self._assess_impact(
                             item.get("title", "")
                         ),
+                        is_source_monitoring=is_src_mon,
                     ))
             except Exception as e:
                 logger.warning(
@@ -181,6 +191,7 @@ class ComplianceCollector:
                     summary=f"Keyword '{keyword}' found on {source_url}",
                     change_type=self._classify_change(keyword),
                     impact_level="medium",
+                    is_source_monitoring=True,
                 ))
         return findings
 

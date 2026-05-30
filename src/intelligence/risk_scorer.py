@@ -89,9 +89,13 @@ class RiskScorer:
 
             total_weighted += weight
 
-        # Normalize to 0-100 scale
-        max_possible = len(findings) * SEVERITY_WEIGHTS["critical"] * recency_weight
-        score = min(100.0, (total_weighted / max_possible) * 100) if max_possible > 0 else 0.0
+        # Score = weighted sum normalized to 0-100 scale.
+        # Each critical-finding-equivalent at full recency = 10 points.
+        # Cap at 100 so that 10 critical-tier signals max out the scale.
+        # This avoids the dilution problem where adding low-severity findings
+        # inflated max_possible and lowered the score.
+        raw = total_weighted / (SEVERITY_WEIGHTS["critical"] * recency_weight) * 10
+        score = min(100.0, round(raw, 1))
 
         return {
             "score": round(score, 1),
